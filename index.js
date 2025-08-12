@@ -8,8 +8,13 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000; // Vercel will set the port automatically
 const API_KEY = process.env.ZENOPAY_API_KEY; // Get API Key from Vercel Environment Variables
-const EBOOK_PRICE = 200; // The price for the ebook in TZS - CORRECTED PRICE
+const EBOOK_PRICE = 3000; // The price for the ebook in TZS
 const API_URL = "https://zenoapi.com/api/payments/mobile_money_tanzania";
+const CHECK_STATUS_URL = "https://zenoapi.com/api/payments/status";
+
+// In-memory storage for transaction statuses (for simulation purposes)
+// In a real application, you would use a database (e.g., Firestore, MongoDB).
+const transactionStore = new Map();
 
 // --- Middleware ---
 app.use(express.json());
@@ -27,7 +32,7 @@ app.get('/', (req, res) => {
 });
 
 // Route to serve the thank you page
-app.get('/thank-you', (req, res) => {
+app.get('/thank-you.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'thank-you.html'));
 });
 
@@ -35,74 +40,69 @@ app.get('/thank-you', (req, res) => {
 app.post('/pay', async (req, res) => {
     const { phone } = req.body;
 
-    // Basic validation for the phone number
     if (!phone || !(phone.startsWith('07') || phone.startsWith('06')) || phone.length !== 10) {
-        return res.status(400).json({
-            message_title: "Namba si sahihi",
-            message_body: "Tafadhali rudi mwanzo uweke namba sahihi ya simu, mfano: 07xxxxxxxx.",
-            status: "Error",
-            reference: "N/A"
-        });
+        return res.status(400).json({ message_body: "Namba si sahihi." });
     }
 
-    // Create a unique reference for the transaction
     const transaction_reference = `EBOOK-${Date.now()}`;
     
-    // Payload for the ZenoPay API
     const payload = {
         "order_id": transaction_reference,
         "buyer_name": phone, 
         "buyer_email": `${phone}@example.com`,
         "buyer_phone": phone,
-        "amount": EBOOK_PRICE // Using the corrected price
+        "amount": EBOOK_PRICE
     };
 
-    // Headers for authentication
     const headers = {
         "Content-Type": "application/json",
         "x-api-key": API_KEY
     };
 
     try {
-        // Send the request to ZenoPay
         const response = await axios.post(API_URL, payload, { headers });
 
-        console.log("ZenoPay API Response:", response.data);
-
-        // A real application would typically rely on a webhook from ZenoPay to confirm payment.
-        // For this simulation, we'll assume the push was sent successfully and the user will confirm on their phone.
-        // The frontend will handle the redirect to the thank you page.
         if (response.data && response.data.status === 'success') {
+            // Store the transaction with a PENDING status
+            transactionStore.set(transaction_reference, { status: 'PENDING' });
+            
+            // Simulate payment completion after 15 seconds for demonstration
+            // In a real scenario, you would rely on a webhook from ZenoPay
+            setTimeout(() => {
+                 transactionStore.set(transaction_reference, { status: 'PAID' });
+                 console.log(`SIMULATED: Transaction ${transaction_reference} marked as PAID.`);
+            }, 15000);
+
             res.json({
                 message_title: "Angalia Simu Yako!",
-                message_body: "Tumekutumia ombi la malipo. Tafadhali weka namba yako ya siri kuthibitisha. Baada ya kulipa, utaweza kuendelea.",
+                message_body: "Tumekutumia ombi la malipo. Tafadhali weka namba yako ya siri kuthibitisha.",
                 status: "Inasubiri Uthibitisho",
                 reference: transaction_reference,
-                // We can add a success flag for the frontend to know when to show the 'continue' button
                 payment_initiated: true 
             });
         } else {
-            res.status(400).json({
-                message_title: "Ombi la Malipo Halikufanikiwa",
-                message_body: response.data.message || "Hatukuweza kutuma ombi la malipo. Tafadhali angalia salio lako na ujaribu tena.",
-                status: "Imeshindwa",
-                reference: transaction_reference
-            });
+            res.status(400).json({ message_body: response.data.message || "Ombi la malipo halikufanikiwa." });
         }
     } catch (error) {
-        // Handle network errors or errors from the ZenoPay API itself
-        console.error("An error occurred:", error.response ? error.response.data : error.message);
-        res.status(500).json({
-            message_title: "Hitilafu ya Mfumo",
-            message_body: "Samahani, kumetokea tatizo la kimfumo. Tafadhali jaribu tena baadae.",
-            status: "Error",
-            reference: transaction_reference
-        });
+        console.error("Payment initiation error:", error.response ? error.response.data : error.message);
+        res.status(500).json({ message_body: "Samahani, kumetokea tatizo la kimfumo." });
     }
 });
+
+// NEW: Route for the frontend to poll for payment status
+app.get('/check-payment/:reference', (req, res) => {
+    const { reference } = req.params;
+    const transaction = transactionStore.get(reference);
+
+    if (transaction) {
+        res.json({ status: transaction.status }); // e.g., 'PENDING' or 'PAID'
+    } else {
+        res.status(404).json({ status: 'NOT_FOUND' });
+    }
+});
+
 
 // Start the server
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
-
