@@ -8,7 +8,7 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000; // Vercel will set the port automatically
 const API_KEY = process.env.ZENOPAY_API_KEY; // Get API Key from Vercel Environment Variables
-const EBOOK_PRICE = 3000; // The price for the ebook in TZS - CORRECTED PRICE
+const EBOOK_PRICE = 200; // The price for the ebook in TZS - CORRECTED PRICE
 const API_URL = "https://zenoapi.com/api/payments/mobile_money_tanzania";
 
 // --- Middleware ---
@@ -105,3 +105,4 @@ app.post('/pay', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+
