@@ -8,23 +8,27 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000; // Vercel will set the port automatically
 const API_KEY = process.env.ZENOPAY_API_KEY; // Get API Key from Vercel Environment Variables
-const GROUP_PRICE = 5000; // The price for your WhatsApp group in TZS
+const EBOOK_PRICE = 3000; // The price for the ebook in TZS - CORRECTED PRICE
 const API_URL = "https://zenoapi.com/api/payments/mobile_money_tanzania";
 
 // --- Middleware ---
-// This allows our server to understand JSON and form data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- HTML Template ---
-// We'll serve a static HTML file for the frontend
-const paymentPagePath = path.join(__dirname, 'public', 'index.html');
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
+
 
 // --- Web Routes ---
 
-// Route to serve the main payment page
+// Route to serve the main sales page (index.html)
 app.get('/', (req, res) => {
-    res.sendFile(paymentPagePath);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Route to serve the thank you page
+app.get('/thank-you', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'thank-you.html'));
 });
 
 // Route to handle the payment submission
@@ -41,15 +45,16 @@ app.post('/pay', async (req, res) => {
         });
     }
 
-    const transaction_reference = `WPGRP-${Date.now()}`;
+    // Create a unique reference for the transaction
+    const transaction_reference = `EBOOK-${Date.now()}`;
     
     // Payload for the ZenoPay API
     const payload = {
         "order_id": transaction_reference,
-        "buyer_name": phone,
+        "buyer_name": phone, 
         "buyer_email": `${phone}@example.com`,
         "buyer_phone": phone,
-        "amount": GROUP_PRICE
+        "amount": EBOOK_PRICE // Using the corrected price
     };
 
     // Headers for authentication
@@ -64,23 +69,28 @@ app.post('/pay', async (req, res) => {
 
         console.log("ZenoPay API Response:", response.data);
 
-        // Check the response from ZenoPay
+        // A real application would typically rely on a webhook from ZenoPay to confirm payment.
+        // For this simulation, we'll assume the push was sent successfully and the user will confirm on their phone.
+        // The frontend will handle the redirect to the thank you page.
         if (response.data && response.data.status === 'success') {
             res.json({
                 message_title: "Angalia Simu Yako!",
-                message_body: "Tumekutumia ombi la malipo. Tafadhali weka namba yako ya siri kuthibitisha.",
-                status: "Inasubiri uthibitisho",
-                reference: transaction_reference
+                message_body: "Tumekutumia ombi la malipo. Tafadhali weka namba yako ya siri kuthibitisha. Baada ya kulipa, utaweza kuendelea.",
+                status: "Inasubiri Uthibitisho",
+                reference: transaction_reference,
+                // We can add a success flag for the frontend to know when to show the 'continue' button
+                payment_initiated: true 
             });
         } else {
             res.status(400).json({
                 message_title: "Ombi la Malipo Halikufanikiwa",
-                message_body: response.data.message || "Hatukuweza kutuma ombi la malipo.",
+                message_body: response.data.message || "Hatukuweza kutuma ombi la malipo. Tafadhali angalia salio lako na ujaribu tena.",
                 status: "Imeshindwa",
                 reference: transaction_reference
             });
         }
     } catch (error) {
+        // Handle network errors or errors from the ZenoPay API itself
         console.error("An error occurred:", error.response ? error.response.data : error.message);
         res.status(500).json({
             message_title: "Hitilafu ya Mfumo",
@@ -95,7 +105,3 @@ app.post('/pay', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
-
-
-
-
