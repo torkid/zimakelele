@@ -348,21 +348,21 @@
                 </form>
             </div>
 
-            <!-- Result View -->
-            <div id="result-view" class="hidden text-center text-white">
-                 <div id="spinner" class="flex justify-center mb-4">
+            <!-- Waiting View -->
+            <div id="waiting-view" class="hidden text-center text-white">
+                 <div class="flex justify-center mb-4">
                     <svg class="animate-spin h-12 w-12 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                 </div>
-                <h1 id="result-title" class="text-2xl font-bold mb-4"></h1>
-                <p id="result-body" class="text-slate-300 mb-6"></p>
+                <h1 id="waiting-title" class="text-2xl font-bold mb-4">Angalia Simu Yako!</h1>
+                <p id="waiting-body" class="text-slate-300 mb-6">Tumekutumia ombi la malipo. Tafadhali weka namba yako ya siri kuthibitisha. Tunasubiri uthibitisho...</p>
                 <div class="p-4 bg-slate-700/50 rounded-lg text-left">
-                    <p class="text-sm"><span class="font-bold">Hali:</span> <span id="result-status"></span></p>
-                    <p class="text-sm"><span class="font-bold">Kumbukumbu:</span> <span id="result-ref"></span></p>
+                    <p class="text-sm"><span class="font-bold">Hali:</span> <span id="waiting-status" class="text-yellow-400">Inasubiri Malipo</span></p>
+                    <p class="text-sm"><span class="font-bold">Kumbukumbu:</span> <span id="waiting-ref"></span></p>
                 </div>
-                <button id="reset-button" class="inline-block mt-6 text-amber-400 hover:text-amber-300 font-semibold">Jaribu Tena</button>
+                 <button id="cancel-button" class="inline-block mt-6 text-red-400 hover:text-red-300 font-semibold">Sitisha</button>
             </div>
         </div>
     </div>
@@ -373,9 +373,26 @@
             const paymentModal = document.getElementById('payment-modal');
             const closeModalButton = document.getElementById('close-modal');
             const openModalTriggers = document.querySelectorAll('.open-modal-trigger');
+            
+            const formView = document.getElementById('form-view');
+            const waitingView = document.getElementById('waiting-view');
+            const paymentForm = document.getElementById('payment-form');
+            const cancelButton = document.getElementById('cancel-button');
+            const payButtonText = document.getElementById('pay-button-text');
+            const payButtonSpinner = document.getElementById('pay-button-spinner');
+
+            let pollingInterval;
 
             const openModal = () => paymentModal.classList.remove('hidden');
-            const closeModal = () => paymentModal.classList.add('hidden');
+            const closeModal = () => {
+                paymentModal.classList.add('hidden');
+                clearInterval(pollingInterval);
+                // Reset views after a short delay
+                setTimeout(() => {
+                    formView.classList.remove('hidden');
+                    waitingView.classList.add('hidden');
+                }, 300);
+            };
 
             openModalTriggers.forEach(trigger => {
                 trigger.addEventListener('click', (e) => {
@@ -388,26 +405,38 @@
                 });
             });
 
-            if(closeModalButton) {
-                closeModalButton.addEventListener('click', closeModal);
-            }
+            if(closeModalButton) closeModalButton.addEventListener('click', closeModal);
+            if(cancelButton) cancelButton.addEventListener('click', closeModal);
             
             if(paymentModal) {
                 paymentModal.addEventListener('click', (event) => {
-                    if (event.target === paymentModal) {
-                        closeModal();
-                    }
+                    if (event.target === paymentModal) closeModal();
                 });
             }
 
-            // --- Payment Form Logic ---
-            const formView = document.getElementById('form-view');
-            const resultView = document.getElementById('result-view');
-            const paymentForm = document.getElementById('payment-form');
-            const resetButton = document.getElementById('reset-button');
-            const payButtonText = document.getElementById('pay-button-text');
-            const payButtonSpinner = document.getElementById('pay-button-spinner');
+            // --- Payment Polling Logic ---
+            const startPolling = (reference) => {
+                pollingInterval = setInterval(async () => {
+                    try {
+                        // This endpoint needs to be created on the backend
+                        const response = await fetch(`/check-payment/${reference}`);
+                        const result = await response.json();
 
+                        if (result.status === 'PAID') {
+                            clearInterval(pollingInterval);
+                            window.location.href = '/thank-you.html'; // Redirect to thank you page
+                        }
+                        // If status is still PENDING, do nothing and wait for the next poll.
+                        // If status is FAILED, you could update the UI to show that.
+                    } catch (error) {
+                        console.error('Polling error:', error);
+                        // Optional: stop polling on error or handle it
+                    }
+                }, 3000); // Poll every 3 seconds
+            };
+
+
+            // --- Payment Form Submission ---
             if (paymentForm) {
                 paymentForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
@@ -416,13 +445,6 @@
                     payButtonText.classList.add('hidden');
                     payButtonSpinner.classList.remove('hidden');
                     submitButton.disabled = true;
-
-                    formView.classList.add('hidden');
-                    resultView.classList.remove('hidden');
-                    document.getElementById('spinner').classList.remove('hidden');
-                    document.getElementById('result-title').textContent = '';
-                    document.getElementById('result-body').textContent = '';
-
 
                     const phone = document.getElementById('phone').value;
 
@@ -435,38 +457,29 @@
 
                         const result = await response.json();
                         
-                        document.getElementById('spinner').classList.add('hidden');
-                        document.getElementById('result-title').textContent = result.message_title;
-                        document.getElementById('result-body').textContent = result.message_body;
-                        document.getElementById('result-status').textContent = result.status;
-                        document.getElementById('result-ref').textContent = result.reference;
+                        if (response.ok && result.payment_initiated) {
+                            // Hide form, show waiting view
+                            formView.classList.add('hidden');
+                            waitingView.classList.remove('hidden');
+                            document.getElementById('waiting-ref').textContent = result.reference;
+                            
+                            // Start polling for payment status
+                            startPolling(result.reference);
+
+                        } else {
+                            // Show error message on the form itself
+                            alert(result.message_body || 'Ombi halikufanikiwa.');
+                            payButtonText.classList.remove('hidden');
+                            payButtonSpinner.classList.add('hidden');
+                            submitButton.disabled = false;
+                        }
 
                     } catch (error) {
-                        document.getElementById('spinner').classList.add('hidden');
-                        document.getElementById('result-title').textContent = 'Hitilafu ya Mtandao';
-                        document.getElementById('result-body').textContent = 'Imeshindwa kuwasiliana na server. Tafadhali angalia intaneti yako kisha jaribu tena.';
-                        document.getElementById('result-status').textContent = 'Error';
-                        document.getElementById('result-ref').textContent = 'N/A';
-                    } finally {
+                        alert('Hitilafu ya Mtandao. Tafadhali jaribu tena.');
                         payButtonText.classList.remove('hidden');
                         payButtonSpinner.classList.add('hidden');
                         submitButton.disabled = false;
                     }
-                });
-            }
-
-            const resetForm = () => {
-                formView.classList.remove('hidden');
-                resultView.classList.add('hidden');
-                paymentForm.reset();
-            };
-
-            if (resetButton) {
-                resetButton.addEventListener('click', resetForm);
-            }
-            if (closeModalButton) {
-                closeModalButton.addEventListener('click', () => {
-                    setTimeout(resetForm, 300); // Reset form after modal close animation
                 });
             }
         });
