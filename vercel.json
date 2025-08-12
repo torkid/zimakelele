@@ -16,8 +16,12 @@
       "dest": "index.js"
     },
     {
+      "src": "/check-payment/(.*)",
+      "dest": "index.js"
+    },
+    {
       "src": "/(.*)",
-      "dest": "public/$1"
+      "dest": "/public/$1"
     }
   ]
 }
