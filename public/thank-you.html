@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asante! Pata Kitabu Chako Hapa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif;
+            background-color: #0F172A; /* Slate 900 */
+            color: #E2E8F0; /* Slate 200 */
+        }
+        .brand-gold {
+            color: #FBBF24; /* Amber 400 */
+        }
+        .bg-brand-gold {
+            background-color: #FBBF24;
+        }
+        .bg-brand-gold:hover {
+            background-color: #F59E0B; /* Amber 500 */
+        }
+        .download-button {
+            transition: all 0.3s ease-in-out;
+        }
+        .download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-2xl mx-auto text-center">
+            <div class="mb-6">
+                <svg class="w-24 h-24 mx-auto text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black text-white">Malipo Yamekamilika!</h1>
+            <p class="text-lg text-slate-300 mt-4">Asante sana kwa kununua <span class="font-bold brand-gold">'Kutoka Kuwaza Hadi Kutongoza'</span>. Tunaamini huu utakuwa mwanzo wa safari yako ya ushindi.</p>
+            <p class="text-slate-400 mt-2">Bonyeza vitufe hapo chini kupakua nakala yako na bonasi ulizoahidiwa.</p>
+
+            <div class="mt-10 space-y-6">
+                <!-- Main Ebook Download -->
+                <a href="https://drive.google.com/file/d/1BkoRU_2OU4ZBNWIV6PkMA87fILXuLO48/view?usp=sharing" target="_blank" class="download-button inline-block w-full max-w-md bg-brand-gold text-slate-900 font-bold text-lg py-4 px-10 rounded-lg shadow-lg">
+                    📚 Pakua Kitabu Kikuu (PDF)
+                </a>
+
+                <!-- Bonuses -->
+                <div class="w-full max-w-md mx-auto bg-slate-800/50 p-6 rounded-lg">
+                    <h3 class="font-bold text-white text-xl mb-4">Bonasi Zako za Ziada:</h3>
+                    <div class="space-y-4">
+                        <a href="#" class="download-button block w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg">
+                            🎁 Bonasi #1: ZIMA KELELE Cheatsheet (Inakuja Hivi Karibuni)
+                        </a>
+                        <a href="#" class="download-button block w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg">
+                            🎁 Bonasi #2: Benki ya Vianzisha Soga (Inakuja Hivi Karibuni)
+                        </a>
+                    </div>
+                </div>
+            </div>
+             <p class="text-xs text-slate-500 mt-8">Kama una tatizo lolote, wasiliana nasi kupitia support@example.com</p>
+        </div>
+    </div>
+
+</body>
+</html>
