@@ -12,10 +12,6 @@ const EBOOK_PRICE = 200; // The price for the ebook in TZS
 const API_URL = "https://zenoapi.com/api/payments/mobile_money_tanzania";
 const CHECK_STATUS_URL = "https://zenoapi.com/api/payments/status";
 
-// In-memory storage for transaction statuses (for simulation purposes)
-// In a real application, you would use a database (e.g., Firestore, MongoDB).
-const transactionStore = new Map();
-
 // --- Middleware ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -63,16 +59,6 @@ app.post('/pay', async (req, res) => {
         const response = await axios.post(API_URL, payload, { headers });
 
         if (response.data && response.data.status === 'success') {
-            // Store the transaction with a PENDING status
-            transactionStore.set(transaction_reference, { status: 'PENDING' });
-            
-            // Simulate payment completion after 15 seconds for demonstration
-            // In a real scenario, you would rely on a webhook from ZenoPay
-            setTimeout(() => {
-                 transactionStore.set(transaction_reference, { status: 'PAID' });
-                 console.log(`SIMULATED: Transaction ${transaction_reference} marked as PAID.`);
-            }, 15000);
-
             res.json({
                 message_title: "Angalia Simu Yako!",
                 message_body: "Tumekutumia ombi la malipo. Tafadhali weka namba yako ya siri kuthibitisha.",
@@ -89,15 +75,39 @@ app.post('/pay', async (req, res) => {
     }
 });
 
-// NEW: Route for the frontend to poll for payment status
-app.get('/check-payment/:reference', (req, res) => {
+// CORRECTED: Route for the frontend to poll for payment status from ZenoPay
+app.get('/check-payment/:reference', async (req, res) => {
     const { reference } = req.params;
-    const transaction = transactionStore.get(reference);
 
-    if (transaction) {
-        res.json({ status: transaction.status }); // e.g., 'PENDING' or 'PAID'
-    } else {
-        res.status(404).json({ status: 'NOT_FOUND' });
+    if (!reference) {
+        return res.status(400).json({ status: 'INVALID_REFERENCE' });
+    }
+
+    const headers = {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY
+    };
+
+    try {
+        const response = await axios.get(`${CHECK_STATUS_URL}/${reference}`, { headers });
+        
+        // ZenoPay will return a status like "Paid", "Pending", "Failed"
+        if (response.data && response.data.status) {
+            let status = 'PENDING';
+            if (response.data.status.toLowerCase() === 'paid') {
+                status = 'PAID';
+            } else if (response.data.status.toLowerCase() === 'failed') {
+                status = 'FAILED';
+            }
+            res.json({ status: status });
+        } else {
+            res.status(404).json({ status: 'NOT_FOUND' });
+        }
+    } catch (error) {
+        console.error(`Status check error for ${reference}:`, error.response ? error.response.data : error.message);
+        // It's common for a status check to fail if the transaction is very new,
+        // so we'll return PENDING to allow the frontend to retry.
+        res.status(500).json({ status: 'PENDING' });
     }
 });
 
