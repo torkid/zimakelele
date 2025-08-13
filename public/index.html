@@ -418,19 +418,31 @@
             const startPolling = (reference) => {
                 pollingInterval = setInterval(async () => {
                     try {
-                        // This endpoint needs to be created on the backend
                         const response = await fetch(`/api/check-payment/${reference}`);
+                        if (!response.ok) {
+                            // Don't stop polling on server errors, just log and continue
+                            console.error('Polling response not ok:', response.status);
+                            return;
+                        }
                         const result = await response.json();
 
                         if (result.status === 'PAID') {
                             clearInterval(pollingInterval);
                             window.location.href = '/thank-you.html'; // Redirect to thank you page
+                        } else if (result.status === 'FAILED' || result.status === 'ERROR') {
+                            clearInterval(pollingInterval);
+                            // Update UI to show failure
+                            document.getElementById('waiting-title').textContent = 'Malipo Yameshindikana';
+                            document.getElementById('waiting-body').textContent = 'Samahani, kumetokea tatizo. Tafadhali funga na ujaribu tena.';
+                            const statusEl = document.getElementById('waiting-status');
+                            statusEl.textContent = 'Imeshindwa';
+                            statusEl.classList.remove('text-yellow-400');
+                            statusEl.classList.add('text-red-400');
                         }
-                        // If status is still PENDING, do nothing and wait for the next poll.
-                        // If status is FAILED, you could update the UI to show that.
+                        // If status is PENDING, do nothing and let the interval run again.
                     } catch (error) {
-                        console.error('Polling error:', error);
-                        // Optional: stop polling on error or handle it
+                        console.error('Polling fetch error:', error);
+                        // Don't clear interval on network error, it might be temporary
                     }
                 }, 3000); // Poll every 3 seconds
             };
