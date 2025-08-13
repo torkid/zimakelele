@@ -7,6 +7,7 @@ const app = express();
 const API_KEY = process.env.ZENOPAY_API_KEY;
 const EBOOK_PRICE = 200;
 const API_URL = "https://zenoapi.com/api/payments/mobile_money_tanzania";
+// **UPDATED THE CHECK_STATUS_URL to remove the trailing slash**
 const CHECK_STATUS_URL = "https://zenoapi.com/api/payments/status";
 
 app.use(express.json());
@@ -51,10 +52,12 @@ app.get('/api/check-payment/:reference', async (req, res) => {
     const headers = { "Content-Type": "application/json", "x-api-key": API_KEY };
 
     try {
-        const response = await axios.get(`${CHECK_STATUS_URL}/${reference}`, { headers });
+        // **THE FIX IS HERE: Changed to use query parameters instead of path parameters**
+        const response = await axios.get(CHECK_STATUS_URL, { 
+            params: { order_id: reference },
+            headers: headers 
+        });
         
-        // **ADDED DETAILED LOGGING HERE**
-        // This will show us the exact response from ZenoPay in the Vercel logs.
         console.log(`ZenoPay response for ${reference}:`, JSON.stringify(response.data, null, 2));
 
         if (response.data && response.data.status) {
@@ -63,7 +66,6 @@ app.get('/api/check-payment/:reference', async (req, res) => {
             if (response.data.status.toLowerCase() === 'failed') status = 'FAILED';
             res.json({ status });
         } else {
-            // This case might happen if ZenoPay returns a 200 OK but with an unexpected body.
             res.status(404).json({ status: 'NOT_FOUND' });
         }
     } catch (error) {
