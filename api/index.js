@@ -62,7 +62,16 @@ app.get('/api/check-payment/:reference', async (req, res) => {
         }
     } catch (error) {
         console.error(`Status check error for ${reference}:`, error.response ? error.response.data : error.message);
-        res.status(500).json({ status: 'PENDING' });
+        
+        // **THE FIX IS HERE**
+        // If ZenoPay returns a 404, it's likely the transaction is still processing.
+        // It's safe to return 'PENDING' with a 200 OK status so the frontend continues polling.
+        if (error.response && error.response.status === 404) {
+            return res.json({ status: 'PENDING' });
+        }
+        
+        // For any other type of error, send a server error status with a more descriptive status.
+        res.status(500).json({ status: 'ERROR' });
     }
 });
 
