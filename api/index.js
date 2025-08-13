@@ -52,25 +52,27 @@ app.get('/api/check-payment/:reference', async (req, res) => {
 
     try {
         const response = await axios.get(`${CHECK_STATUS_URL}/${reference}`, { headers });
+        
+        // **ADDED DETAILED LOGGING HERE**
+        // This will show us the exact response from ZenoPay in the Vercel logs.
+        console.log(`ZenoPay response for ${reference}:`, JSON.stringify(response.data, null, 2));
+
         if (response.data && response.data.status) {
             let status = 'PENDING';
             if (response.data.status.toLowerCase() === 'paid') status = 'PAID';
             if (response.data.status.toLowerCase() === 'failed') status = 'FAILED';
             res.json({ status });
         } else {
+            // This case might happen if ZenoPay returns a 200 OK but with an unexpected body.
             res.status(404).json({ status: 'NOT_FOUND' });
         }
     } catch (error) {
         console.error(`Status check error for ${reference}:`, error.response ? error.response.data : error.message);
         
-        // **THE FIX IS HERE**
-        // If ZenoPay returns a 404, it's likely the transaction is still processing.
-        // It's safe to return 'PENDING' with a 200 OK status so the frontend continues polling.
         if (error.response && error.response.status === 404) {
             return res.json({ status: 'PENDING' });
         }
         
-        // For any other type of error, send a server error status with a more descriptive status.
         res.status(500).json({ status: 'ERROR' });
     }
 });
