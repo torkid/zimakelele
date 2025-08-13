@@ -44,21 +44,23 @@ app.post('/api/pay', async (req, res) => {
     }
 });
 
-app.get('/api/check-payment/:reference', async (req, res) => {
-    const { reference } = req.params;
-    if (!reference) {
+// **THE FIX IS HERE: Changed the route to accept a query parameter**
+app.get('/api/check-payment', async (req, res) => {
+    // **THE FIX IS HERE: Reading from req.query instead of req.params**
+    const { order_id } = req.query; 
+
+    if (!order_id) {
         return res.status(400).json({ status: 'INVALID_REFERENCE' });
     }
     const headers = { "Content-Type": "application/json", "x-api-key": API_KEY };
 
     try {
-        // **THE FIX IS HERE: Changed to use query parameters instead of path parameters**
         const response = await axios.get(CHECK_STATUS_URL, { 
-            params: { order_id: reference },
+            params: { order_id: order_id },
             headers: headers 
         });
         
-        console.log(`ZenoPay response for ${reference}:`, JSON.stringify(response.data, null, 2));
+        console.log(`ZenoPay response for ${order_id}:`, JSON.stringify(response.data, null, 2));
 
         if (response.data && response.data.status) {
             let status = 'PENDING';
@@ -69,7 +71,7 @@ app.get('/api/check-payment/:reference', async (req, res) => {
             res.status(404).json({ status: 'NOT_FOUND' });
         }
     } catch (error) {
-        console.error(`Status check error for ${reference}:`, error.response ? error.response.data : error.message);
+        console.error(`Status check error for ${order_id}:`, error.response ? error.response.data : error.message);
         
         if (error.response && error.response.status === 404) {
             return res.json({ status: 'PENDING' });
