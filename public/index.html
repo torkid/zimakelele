@@ -419,7 +419,7 @@
                 pollingInterval = setInterval(async () => {
                     try {
                         // This endpoint needs to be created on the backend
-                        const response = await fetch(`/check-payment/${reference}`);
+                        const response = await fetch(`/api/check-payment/${reference}`);
                         const result = await response.json();
 
                         if (result.status === 'PAID') {
@@ -449,7 +449,7 @@
                     const phone = document.getElementById('phone').value;
 
                     try {
-                        const response = await fetch('/pay', {
+                        const response = await fetch('/api/pay', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ phone: phone })
