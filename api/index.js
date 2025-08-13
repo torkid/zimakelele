@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 const API_KEY = process.env.ZENOPAY_API_KEY;
-const EBOOK_PRICE = 3000;
+const EBOOK_PRICE = 200;
 const API_URL = "https://zenoapi.com/api/payments/mobile_money_tanzania";
 const CHECK_STATUS_URL = "https://zenoapi.com/api/payments/status";
 
